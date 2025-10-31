@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Smooth fade animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.6s ease-out;
+}
+
+/* Google Translate styling */
+#google_translate_element select {
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid #f97316;
+  background-color: white;
+  cursor: pointer;
+}
+
+/* Hide top Google translate banner */
+.goog-te-banner-frame.skiptranslate {
+  display: none !important;
+}
+
+/* Fix layout shift caused by hidden banner */
+body {
+  top: 0 !important;
+  position: relative;
+}
