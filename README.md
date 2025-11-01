@@ -32,7 +32,7 @@ The dashboard automatically detects your location and provides employment data f
 | **Frontend** | React 18 + TypeScript | Component-based UI with type safety |
 | **Styling** | Tailwind CSS | Utility-first responsive design |
 | **Backend** | Supabase (PostgreSQL) | Real-time database with REST API |
-| **Charts** | Canvas API | Custom lightweight chart rendering |
+| **Charts** | Plotly.js + Canvas API | Interactive and custom chart rendering |
 | **Icons** | Lucide React | Consistent, scalable SVG icons |
 | **Geolocation** | Nominatim OSM | Reverse geocoding for auto-detection |
 | **i18n** | Google Translate | Support for 10 Indian languages |
@@ -140,6 +140,24 @@ ORDER BY state_name, month;
 
 Pre-aggregated state-level metrics for fast querying.
 
+#### `district_monthly_summary` (View)
+```sql
+CREATE VIEW district_monthly_summary AS
+SELECT
+  district_name,
+  month,
+  total_individuals_worked,
+  wages,
+  women_persondays,
+  sc_persondays,
+  st_persondays
+FROM mgnrega_stats m
+JOIN districts d ON m.district_code = d.district_code
+ORDER BY district_name, month;
+```
+
+District-level monthly metrics used by advanced analytics components.
+
 ---
 
 ## 📊 Dashboard Analytics
@@ -154,22 +172,49 @@ Pre-aggregated state-level metrics for fast querying.
 
 ### Visualizations
 
-#### Line Chart: Monthly Employment Trends
+#### State-Level Charts (Canvas-based)
+
+**Line Chart: Monthly Employment Trends**
 - **X-Axis**: Months (sorted chronologically)
 - **Y-Axis**: Total individuals worked
 - **Interaction**: Hover over data points for exact values
 - **Data Source**: `state_monthly_summary` grouped by month
 
-#### Pie Chart: Demographic Breakdown
+**Pie Chart: Demographic Breakdown**
 - **Segments**: Women, SC (Scheduled Caste), ST (Scheduled Tribe)
 - **Data**: Persondays contributed by each demographic
 - **Insight**: Identifies inclusion and representation in the scheme
 - **Data Source**: `women_persondays`, `sc_persondays`, `st_persondays`
 
-#### Top 5 Districts
-- Ranked by employment volume
-- Expandable with real district data integration
-- Currently shows placeholder data (future enhancement)
+#### District-Level Analytics (Plotly-powered)
+
+**Sunburst Chart: Demographics Breakdown**
+- **Technology**: Plotly.js interactive sunburst visualization
+- **Categories**: Women (Orange #FB923C), SC (Green #16A34A), ST (Blue #3B82F6), Others (Gray #E5E7EB)
+- **Interaction**: Click segments to drill down, hover for exact values
+- **Data Source**: `district_monthly_summary` aggregated by category
+- **Insight Component**: `SunburstInsight` displays demographic percentages and totals
+
+**Heatmap: Monthly Category Activity**
+- **Technology**: Plotly.js heatmap with gradient color scale
+- **Axes**: X = Months, Y = Demographics (Women, SC, ST, Others)
+- **Color Scale**: Light gray to dark orange based on persondays intensity
+- **Interaction**: Hover cells to see exact personday counts
+- **Data Source**: `district_monthly_summary` grouped by month and category
+- **Insight Component**: `HeatmapInsight` identifies peak months and categories
+
+**Trendline: Wages vs Individuals**
+- **Technology**: Plotly.js dual-axis line chart
+- **Left Y-Axis**: Wages in rupees (Green line #16A34A)
+- **Right Y-Axis**: Total individuals (Orange line #F97316)
+- **Interaction**: Hover to see exact values per month
+- **Data Source**: `district_monthly_summary` with wages and individuals columns
+- **Insight Component**: `TrendInsight` calculates average wage per person
+
+**Choropleth Map: Geographic Distribution**
+- **Status**: Placeholder component
+- **Future Feature**: Interactive map showing district-level employment data
+- **Planned Technology**: Plotly.js choropleth with India district boundaries
 
 ### State Selection
 
@@ -223,9 +268,9 @@ Pre-aggregated state-level metrics for fast querying.
 - WebSocket connection via Supabase Realtime
 - Live data streaming as new stats are published
 
-📍 **District-Level Analytics**
-- Drill-down view for top performers
-- District comparisons within state
+🗺️ **Enhanced Geographic Visualization**
+- Complete choropleth map implementation with district boundaries
+- Interactive state-to-district drill-down navigation
 
 🔐 **Role-Based Access**
 - Policymaker dashboard with export capabilities
@@ -342,23 +387,37 @@ curl "https://your-project.supabase.co/rest/v1/state_monthly_summary?state_name=
 ```
 src/
 ├── components/
-│   ├── KPICard.tsx          # Metric cards (individuals, wages, averages)
-│   ├── LineChart.tsx        # Monthly trends visualization
-│   └── PieChart.tsx         # Demographics breakdown
+│   ├── KPICard.tsx               # Metric cards (individuals, wages, averages)
+│   ├── BarChart.tsx              # Monthly bar chart visualization
+│   ├── PieChart.tsx              # Demographics pie chart breakdown
+│   ├── Sunburst.tsx              # Plotly sunburst chart (district-level demographics)
+│   ├── Heatmap.tsx               # Plotly heatmap (monthly × category activity)
+│   ├── Trendline.tsx             # Plotly dual-axis trend (wages vs individuals)
+│   ├── ChoroplethMap.tsx         # Placeholder for geographic map
+│   └── Insights/
+│       ├── SunburstInsight.tsx   # Narrative for demographics breakdown
+│       ├── HeatmapInsight.tsx    # Narrative for peak month/category
+│       └── TrendInsight.tsx      # Narrative for wage trends
 ├── lib/
-│   └── supabase.ts          # Supabase client initialization
+│   ├── supabase.ts               # Supabase client initialization
+│   └── hooks/
+│       ├── useSunburstData.ts    # Data fetching hook for sunburst chart
+│       ├── useHeatmapData.ts     # Data fetching hook for heatmap
+│       └── useTrendData.ts       # Data fetching hook for trendline
+|       |__ useChoroplethData.ts  #  Data fetching hook for Choroplethdata
 ├── utils/
-│   └── stateDetection.ts    # Geolocation + reverse geocoding logic
-├── App.tsx                  # Main dashboard container
-├── main.tsx                 # React entry point
-└── index.css                # Tailwind + custom animations
+│   └── districtDetection.ts         # Geolocation + reverse geocoding logic
+├── App.tsx                       # Main dashboard container
+├── main.tsx                      # React entry point
+└── index.css                     # Tailwind + custom animations
 
 public/
-└── index.html               # HTML with Google Translate script
+└── index.html                    # HTML with Google Translate script
 
-.env.example                 # Environment variable template
-tailwind.config.js           # Tailwind configuration
-vite.config.ts              # Vite build configuration
+.env.example                      # Environment variable template
+india-districts.json              # igen file
+tailwind.config.js                # Tailwind configuration
+vite.config.ts                    # Vite build configuration
 ```
 
 ---
